@@ -18,21 +18,42 @@ We will install and deploy this application using only Kustomize. The `kustomiza
 This application's structure includes:
 
 ```
-kustomize-gitops-example
-├── app
-├── base
-│   ├── configMap.yaml
-│   ├── deployment.yaml
-│   ├── kustomization.yaml
-│   └── service.yaml
-└── overlays
-    ├── production
-    │   ├── config-map.yaml
-    │   ├── deployment.yaml
-    │   └── kustomization.yaml
-    └── staging
-        ├── config-map.yaml
-        └── kustomization.yaml
+gitops-project/
+├── base/
+│   ├── frontend/
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── kustomization.yaml
+│   ├── backend-books/
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── kustomization.yaml
+│   ├── backend-main/
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── kustomization.yaml
+│   └── kustomization.yaml
+│
+├── overlays/
+│   ├── staging/
+│   │   ├── frontend-values.yaml
+│   │   ├── backend-books-values.yaml
+│   │   ├── backend-main-values.yaml
+│   │   └── kustomization.yaml
+│   └── production/
+│       ├── frontend-values.yaml
+│       ├── backend-books-values.yaml
+│       ├── backend-main-values.yaml
+│       └── kustomization.yaml
+│
+├── argo-apps/
+│   ├── frontend-staging.yaml
+│   ├── frontend-production.yaml
+│   ├── backend-books-staging.yaml
+│   ├── backend-books-production.yaml
+│   └── backend-main-{staging,production}.yaml
+│
+└── README.md
 ```
 
 Next, you can configure the cluster with overlays using this command:
