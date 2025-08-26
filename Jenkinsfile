@@ -1,94 +1,148 @@
 pipeline {
     agent any
+    
+    tools {
+        jdk 'jdk17'
+        maven 'maven3'
+    }
 
     environment {
-        // Replace with your registry (DockerHub/GCR/ECR/etc.)
-        clientRegistry = "docker.io/your-org/client"
-        booksRegistry  = "docker.io/your-org/books"
-        mainRegistry   = "docker.io/your-org/main"
-        registryCredential = 'DockerHubLogin'   // Jenkins DockerHub creds
-        gitCreds = 'git-credentials'            // Jenkins git creds
-        repoUrl = 'https://github.com/your-org/kkart.git'
+        SCANNER_HOME= tool 'sonar-scanner'
     }
 
     stages {
-        stage('Prepare') {
+        stage('Git Checkout') {
             steps {
-                script {
-                    sh 'git pull'
-                    env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+               git branch: 'master', credentialsId: 'git-cred', url: 'https://github.com/Akshay2642005/Boardgame.git'
+            }
+        }
+        
+        stage('Compile') {
+            steps {
+                sh "mvn compile"
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh "mvn test"
+            }
+        }
+        
+        stage('File System Scan') {
+            steps {
+                sh "trivy fs --format table -o trivy-fs-report.html ."
+            }
+        }
+        
+        stage('SonarQube Analsyis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=BoardGame -Dsonar.projectKey=BoardGame \
+                            -Dsonar.java.binaries=. '''
                 }
             }
         }
-
-        stage('Build & Push Angular Image') {
-            when { changeset "client/*" }
+        
+        stage('Quality Gate') {
             steps {
                 script {
-                    docker.withRegistry('', registryCredential) {
-                        def img = docker.build("${clientRegistry}:${env.GIT_COMMIT}", "./client/")
-                        img.push()
-                        img.push('latest')
-                    }
+                  waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token' 
                 }
             }
         }
-
-        stage('Build & Push Books Image') {
-            when { changeset "javaapi/*" }
+        
+        stage('Build') {
             steps {
-                script {
-                    docker.withRegistry('', registryCredential) {
-                        def img = docker.build("${booksRegistry}:${env.GIT_COMMIT}", "./javaapi/")
-                        img.push()
-                        img.push('latest')
-                    }
+               sh "mvn package"
+            }
+        }
+        
+        stage('Publish To Nexus') {
+            steps {
+               withMaven(globalMavenSettingsConfig: 'global-settings', jdk: 'jdk17', maven: 'maven3', mavenSettingsConfig: '', traceability: true) {
+                    sh "mvn deploy"
                 }
             }
         }
-
-        stage('Build & Push Main Image') {
-            when { changeset "nodeapi/*" }
+        
+        stage('Build & Tag Docker Image') {
             steps {
-                script {
-                    sh "sed -i 's/localhost/emongo/g' nodeapi/config/keys.js"
-                    docker.withRegistry('', registryCredential) {
-                        def img = docker.build("${mainRegistry}:${env.GIT_COMMIT}", "./nodeapi/")
-                        img.push()
-                        img.push('latest')
+               script {
+                   withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                            sh "docker build -t akshay2642005/boardshack:latest ."
                     }
+               }
+            }
+        }
+        
+        stage('Docker Image Scan') {
+            steps {
+                sh "trivy image --format table -o trivy-image-report.html akshay2642005/boardshack:latest"
+            }
+        }
+        
+        stage('Push Docker Image') {
+            steps {
+               script {
+                   withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                            sh "docker push akshay2642005/boardshack:latest"
+                    }
+               }
+            }
+        }
+        stage('Deploy To Kubernetes') {
+            steps {
+               withKubeConfig(caCertificate: '', clusterName: 'kubernetes', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://172.31.0.56:6443') {
+                        sh "kubectl apply -f deployment-service.yaml"
                 }
             }
         }
-
-        stage('Update Helm Values') {
+        
+        stage('Verify the Deployment') {
             steps {
-                script {
-                    if (currentBuild.changeSets.any { it.affectedFiles.any { it.path.startsWith('client/') } }) {
-                        sh "yq e -i '.image.tag = \"${env.GIT_COMMIT}\"' kkartchart/charts/frontend/values.yaml"
-                    }
-                    if (currentBuild.changeSets.any { it.affectedFiles.any { it.path.startsWith('javaapi/') } }) {
-                        sh "yq e -i '.books.image.tag = \"${env.GIT_COMMIT}\"' kkartchart/charts/backend/values.yaml"
-                    }
-                    if (currentBuild.changeSets.any { it.affectedFiles.any { it.path.startsWith('nodeapi/') } }) {
-                        sh "yq e -i '.main.image.tag = \"${env.GIT_COMMIT}\"' kkartchart/charts/backend/values.yaml"
-                    }
+               withKubeConfig(caCertificate: '', clusterName: 'kubernetes', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://172.31.0.56:6443') {
+                        sh "kubectl get pods -n webapps"
+                        sh "kubectl get svc -n webapps"
                 }
             }
         }
+        
+        
+    }
+    post {
+    always {
+        script {
+            def jobName = env.JOB_NAME
+            def buildNumber = env.BUILD_NUMBER
+            def pipelineStatus = currentBuild.result ?: 'UNKNOWN'
+            def bannerColor = pipelineStatus.toUpperCase() == 'SUCCESS' ? 'green' : 'red'
 
-        stage('Commit & Push Changes') {
-            steps {
-                withCredentials([string(credentialsId: gitCreds, variable: 'GIT_TOKEN')]) {
-                    sh '''
-                        git config --global user.email "jenkins@example.com"
-                        git config --global user.name "Jenkins"
-                        git add kkartchart/charts/*/values.yaml
-                        git commit -m "ci: update image tags to ${GIT_COMMIT}" || echo "No changes to commit"
-                        git push ${repoUrl} HEAD:main
-                    '''
-                }
-            }
+            def body = """
+                <html>
+                <body>
+                <div style="border: 4px solid ${bannerColor}; padding: 10px;">
+                <h2>${jobName} - Build ${buildNumber}</h2>
+                <div style="background-color: ${bannerColor}; padding: 10px;">
+                <h3 style="color: white;">Pipeline Status: ${pipelineStatus.toUpperCase()}</h3>
+                </div>
+                <p>Check the <a href="${BUILD_URL}">console output</a>.</p>
+                </div>
+                </body>
+                </html>
+            """
+
+            emailext (
+                subject: "${jobName} - Build ${buildNumber} - ${pipelineStatus.toUpperCase()}",
+                body: body,
+                to: 'ganeshperumal882000@gmail.com',
+                from: 'jenkins@example.com',
+                replyTo: 'jenkins@example.com',
+                mimeType: 'text/html',
+                attachmentsPattern: 'trivy-image-report.html'
+            )
         }
     }
+}
+
 }
