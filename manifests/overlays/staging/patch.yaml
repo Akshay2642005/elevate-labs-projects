@@ -9,10 +9,3 @@ spec:
       containers:
         - name: boardgame
           image: akshay2642005/boardshack:staging
-          resources:
-            requests:
-              cpu: "300m"
-              memory: "512Mi"
-            limits:
-              cpu: "750m"
-              memory: "1Gi"
