@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boardgame-deployment
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+        - name: boardgame
+          image: akshay2642005/boardshack:stable
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"

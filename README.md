@@ -20,40 +20,18 @@ This application's structure includes:
 ```
 gitops-project/
 ├── base/
-│   ├── frontend/
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   └── kustomization.yaml
-│   ├── backend-books/
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   └── kustomization.yaml
-│   ├── backend-main/
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   └── kustomization.yaml
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── pvc.yaml
 │   └── kustomization.yaml
-│
-├── overlays/
-│   ├── staging/
-│   │   ├── frontend-values.yaml
-│   │   ├── backend-books-values.yaml
-│   │   ├── backend-main-values.yaml
-│   │   └── kustomization.yaml
-│   └── production/
-│       ├── frontend-values.yaml
-│       ├── backend-books-values.yaml
-│       ├── backend-main-values.yaml
-│       └── kustomization.yaml
-│
-├── argo-apps/
-│   ├── frontend-staging.yaml
-│   ├── frontend-production.yaml
-│   ├── backend-books-staging.yaml
-│   ├── backend-books-production.yaml
-│   └── backend-main-{staging,production}.yaml
-│
-└── README.md
+└── overlays/
+    ├── staging/
+    │   ├── kustomization.yaml
+    │   └── patch.yaml
+    └── production/
+        ├── kustomization.yaml
+        └── patch.yaml
 ```
 
 Next, you can configure the cluster with overlays using this command:
