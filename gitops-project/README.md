@@ -19,7 +19,7 @@ We will install and deploy this application using only Kustomize. The `kustomiza
 This application's structure includes:
 
 ```
-gitops-project/
+manifests/
 ├── base/
 │   ├── deployment.yaml
 │   ├── service.yaml
