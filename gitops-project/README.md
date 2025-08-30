@@ -214,7 +214,7 @@ Assuming you're connected to your Kubernetes cluster you need to now log into th
 
 To login to the CLI, execute the following in your terminal:
 
-`argocd login localhost:8080 --username admin --password <same password used in argocd ui>`
+`argocd login <IP>:8080 --username admin --password <same password used in argocd ui>`
 
 You should be able to login using the same password you used when accessin the ArgoCD UI.
 
@@ -234,7 +234,7 @@ If this is the case, then delete the app you previously created wuith the comman
 
 Next, deploy the `kustomization.yaml` file within the CLI and reference the Git repository to create the ArgoCD app:
 
-`argocd app create <application name> --repo https://github.com/hseligson1/kustomize-gitops-example.git --revision main --path overlays/staging  --dest-server https://kubernetes.default.svc --dest-namespace staging`
+`argocd app create <application name> --repo https://github.com/Akshay2642005/elevate-labs-projects.git --revision main --path gitops-project/manifests/overlays/production  --dest-server https://kubernetes.default.svc --dest-namespace prod`
 
 ![ArgoCD CLI Create App](pictures/argocd-cli-create-app.png)
 
