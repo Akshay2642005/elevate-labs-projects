@@ -1,0 +1,12 @@
+route:
+  receiver: "default"
+
+receivers:
+  - name: "default"
+    email_configs:
+      - to: "your-email@example.com"
+        from: "sandbox@example.com"
+        smarthost: "smtp.example.com:587"
+        auth_username: "sandbox@example.com"
+        auth_identity: "sandbox@example.com"
+        auth_password: "yourpassword"
