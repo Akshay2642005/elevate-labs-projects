@@ -14,8 +14,7 @@ This is a sample web application that includes both a base and overlays folder w
 
 We will install and deploy this application using only Kustomize. The `kustomization.yaml` file already exists within this application, so we don't need to create or add this YAML file. Start by cloning the repository to your local environment.
 
-`git clone https://github.com/Akshay2642005/elevate-labs-project.git`
-`cd gitops-project`
+`git clone https://github.com/Akshay2642005/elevate-labs-project.git && cd gitops-project`
 
 This application's structure includes:
 
