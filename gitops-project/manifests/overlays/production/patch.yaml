@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: boardgame
-          image: akshay2642005/boardshack:stable
+          image: akshay2642005/boardshack:prod
           resources:
             requests:
               cpu: "500m"
