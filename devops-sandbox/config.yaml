@@ -1,0 +1,15 @@
+provider: virtualbox # options: virtualbox, libvirt, vmware_desktop, hyperv
+num_vms: 2 # number of machines
+subnet: 192.168.56 # base subnet for private networking
+default_ram: 4096 # default RAM in MB
+default_cpus: 2 # default CPU cores
+
+roles:
+  - hostname: docker
+    role: docker
+    ram: 4096
+    cpus: 2
+  - hostname: monitoring
+    role: monitoring
+    ram: 2048
+    cpus: 2

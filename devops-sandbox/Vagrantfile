@@ -1,28 +1,73 @@
+require 'yaml'
+
 Vagrant.configure("2") do |config|
   config.hostmanager.enabled = true
   config.hostmanager.manage_host = true
 
-  # Define the VM as "monitoring" instead of default
-  config.vm.define "monitoring" do |monitoring|
-    monitoring.vm.hostname = "sandbox"
-    monitoring.vm.box = "ubuntu/focal64"
+  # ---------- LOAD CONFIG ----------
+  user_config = {}
+  if File.exist?("config.yaml")
+    user_config = YAML.load_file("config.yaml")
+  else
+    abort("config.yaml not found! Please create one.")
+  end
 
-    # Networking
-    monitoring.vm.network "private_network", ip: "192.168.56.16"
-    monitoring.vm.network "forwarded_port", guest: 9090, host: 9090     # Prometheus
-    monitoring.vm.network "forwarded_port", guest: 3000, host: 3000     # Grafana
-    monitoring.vm.network "forwarded_port", guest: 9093, host: 9093     # AlertManager
+  num_vms   = user_config["num_vms"] || 1
+  provider  = user_config["provider"] || "virtualbox"
+  subnet    = user_config["subnet"] || "192.168.56"
+  default_ram  = user_config["default_ram"] || 2048
+  default_cpus = user_config["default_cpus"] || 2
+  roles     = %w(monitoring docker k8s minio cicd base)
 
-    # VM resources
-    monitoring.vm.provider "virtualbox" do |vb|
-      vb.memory = "2048"
-      vb.cpus = 2
-      vb.name = "monitoring"
+  (1..num_vms).each do |i|
+    vm_defaults = (user_config["roles"] && user_config["roles"][i-1]) || {}
+
+    hostname = vm_defaults["hostname"] || "node#{i}"
+    ram      = vm_defaults["ram"] || default_ram
+    cpus     = vm_defaults["cpus"] || default_cpus
+    ip       = vm_defaults["ip"] || "#{subnet}.#{10+i}"
+    role     = vm_defaults["role"] || "base"
+
+    unless roles.include?(role)
+      abort("Invalid role '#{role}' for VM #{hostname}. Must be one of: #{roles.join(', ')}")
     end
 
-    # Provisioning
-    monitoring.vm.provision "shell", path: "provision.sh"
+    config.vm.define hostname do |vm|
+      vm.vm.hostname = hostname
+      vm.vm.box = "ubuntu/focal64"
+      vm.vm.network "private_network", ip: ip
+
+      # Forwarded ports for common roles
+      if role == "monitoring"
+        vm.vm.network "forwarded_port", guest: 9090, host: (9090)   # Prometheus
+        vm.vm.network "forwarded_port", guest: 3000, host: (3000)   # Grafana
+        vm.vm.network "forwarded_port", guest: 9093, host: (9093)   # Alertmanager
+      elsif role == "docker"
+        vm.vm.network "forwarded_port", guest: 9000, host: (9000)   # Portainer
+      elsif role == "minio"
+        vm.vm.network "forwarded_port", guest: 9001, host: (9001)   # MinIO Console
+      elsif role == "cicd"
+        vm.vm.network "forwarded_port", guest: 8080, host: (8080)   # Jenkins
+      end
+
+      # Provider-specific settings
+      vm.vm.provider provider do |v|
+        v.memory = ram
+        v.cpus = cpus
+        v.name = hostname
+      end
+
+      # Always provision base setup
+      vm.vm.provision "shell", path: "modules/base/provision.sh"
+
+      # Role-specific provisioning (modularized)
+      provision_script = "modules/#{role}/provision.sh"
+      if File.exist?(provision_script)
+        vm.vm.provision "shell", path: provision_script
+      else
+        puts "No provision script found for role '#{role}', skkipping..."
+      end
+    end
   end
 end
-
 
