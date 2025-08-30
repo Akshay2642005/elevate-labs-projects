@@ -1,5 +1,6 @@
 
 # Applied GitOps with ArgoCD and Kustomize
+
 ![Argo GitOps with Argocd and Kustomize ](pictures/Applied_GitOps_Header.png)
 This is a sample web application that includes both a base and overlays folder with both a Staging and Production environment. We'll explain 2 ways to deploy this application using only Kustomize and Kustomize with ArgoCD.
 
@@ -13,7 +14,8 @@ This is a sample web application that includes both a base and overlays folder w
 
 We will install and deploy this application using only Kustomize. The `kustomization.yaml` file already exists within this application, so we don't need to create or add this YAML file. Start by cloning the repository to your local environment.
 
-`git clone https://github.com/hseligson1/kustomize-gitops-example.git`
+`git clone https://github.com/Akshay2642005/elevate-labs-project.git`
+`cd gitops-project`
 
 This application's structure includes:
 
@@ -23,7 +25,6 @@ gitops-project/
 │   ├── deployment.yaml
 │   ├── service.yaml
 │   ├── ingress.yaml
-│   ├── pvc.yaml
 │   └── kustomization.yaml
 └── overlays/
     ├── staging/
@@ -36,95 +37,102 @@ gitops-project/
 
 Next, you can configure the cluster with overlays using this command:
 
-`kustomize build kustomize-gitops-example/overlays/staging`
+`kustomize build manifests/overlays/staging`
 
 or
 
-`kustomize build kustomize-gitops-example/overlays/production`
+`kustomize build manifests/overlays/production`
 
 This allows you to review the data for both environments. You should see an output similar to this overlay response we executed for staging:
 
 ```
-apiVersion: v1
-data:
-  mysqlDB: staging-mysql.example.com:3306
-kind: ConfigMap
+apiVersion: apps/v1
+kind: Deployment # Kubernetes resource kind we are creating
 metadata:
-  labels:
-    app: demo
-    variant: staging
-  name: staging-the-map
+  name: boardgame-deployment
+spec:
+  selector:
+    matchLabels:
+      app: boardgame
+  replicas: 2 # Number of replicas that will be created for this deployment
+  template:
+    metadata:
+      labels:
+        app: boardgame
+    spec:
+      containers:
+        - name: boardgame
+          image: akshay2642005/boardshack:latest # Image that will be used to containers in the cluster
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080 # The port that the container is running on in the cluster
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
+  name: boardgame-service
   labels:
-    app: demo
-    variant: staging
-  name: staging-demo
+    app: boardgame
 spec:
+  selector:
+    app: boardgame
   ports:
-  - port: 8080
-  selector:
-    app: demo
-    variant: staging
-  type: ClusterIP
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
-  labels:
-    app: demo
-    deployment: demo
-    variant: staging
-  name: staging-the-deployment
+  name: boardgame-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: demo
-      variant: staging
-  template:
-    metadata:
-      labels:
-        app: demo
-        deployment: demo
-        variant: staging
-    spec:
-      containers:
-      - env:
-        - name: MY_MYSQL_DB
-          valueFrom:
-            configMapKeyRef:
-              key: mysqlDB
-              name: staging-the-map
-        image: hseligson/kustomize-sample-app:v1.0.1
-        imagePullPolicy: Always
-        name: the-container
-        ports:
-        - containerPort: 8080
+  ingressClassName: traefik
+  rules:
+    - host: boardgame.staging.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: boardgame-service
+                port:
+                  number: 80
 ```
+
 Whenever you make a change within the overlays directories you can apply those changes to the cluster by executing the same command for the deployment:
 
-`kubectl apply -k kustomize-gitops-example/overlays/staging`
+`kubectl apply -k manifests/overlays/staging`
 
 or
 
-`kubectl apply -k kustomize-gitops-example/overlays/production`
+`kubectl apply -k manifests/overlays/production`
 
-This returns a response informing you if either environment contains the changes and is deployed. Here's the staging environment example: 
+This returns a response informing you if either environment contains the changes and is deployed. Here's the staging environment example:
+
 ```
-configmap/staging-the-map created
-service/staging-demo created
-deployment.apps/staging-the-deployment created
+ingress/boardgame-ingress created
+service/boardgame-service created
+deployment.apps/boardgame-deployment created
 ```
+
 To inspect the deployment and confirm whether or not it's READY, you can execute the command:
 
-`kubectl get deployment staging-the-deployment`
+`kubectl get deployment boardgame-deployment -n staging`
 
 or
 
-`kubectl get deployment production-the-deployment`
+`kubectl get deployment boardgame-deployment -n production`
 
 Fore more details, you can also execute:
 
@@ -136,7 +144,7 @@ Congrats, you've deployed an application only using Kustomize and `kubectl`.
 
 ## Deploy with Kustomize and ArgoCD
 
-Now, that you've deployed your app with Kustomize, let's review how to do the same with ArgoCD. 
+Now, that you've deployed your app with Kustomize, let's review how to do the same with ArgoCD.
 We'll explain how to deploy with both the ArgoCD UI and the argocd CLI.
 
 ### Deploy with ArgoCD UI
@@ -144,7 +152,7 @@ We'll explain how to deploy with both the ArgoCD UI and the argocd CLI.
 Assuming you've installed and configured ArgoCD already, now you can log into ArgoCD and access the UI.
 Next, navigate to the +NEW APP on the left-hand side of the UI. Then add the following below to create the application.
 
-#### General Section:
+#### General Section
 
 - Application Name – This is the application name inside ArgoCD. Enter "kustomize-gitops-example"
 
@@ -154,17 +162,17 @@ Next, navigate to the +NEW APP on the left-hand side of the UI. Then add the fol
 
 ![Argo App General Section](pictures/argocd-create-ui-staging.png)
 
-#### Source Section:
+#### Source Section
 
 - Repository URL – Provide the url for the GitHub repository containing the application manifests. This is the HTTPS URL for this project.
 
 - Revision – You can choose to provide the specific branch or tag for github repo and sync the same state with Kubernetes details. We’ll choose, "main" or you can keep the default, "HEAD".
 
-- Path – This helps in further segregating application manifests inside the GitHub repository. Select the overlays folder based on environment, "overlays/staging". 
+- Path – This helps in further segregating application manifests inside the GitHub repository. Select the overlays folder based on environment, "overlays/staging".
 
 ![Argo App Source Section](pictures/argocd-source-ui-staging.png)
 
-#### Destination Section:
+#### Destination Section
 
 - Cluster URL – ArgoCD can be used to connect and deploy application to multiple Kubernetes clusters. Choose the default in-cluster (where Argo CD itself is deployed).
 
@@ -172,17 +180,17 @@ Next, navigate to the +NEW APP on the left-hand side of the UI. Then add the fol
 
 ![Argo App Destination Section](pictures/argocd-ns-ui.png)
 
-#### Kustomize Section 
+#### Kustomize Section
 
 ArgoCD will read the `kustomization.yaml` file in the path and will prompt you to override with different values. However, we’ll go with the default configuration committed in the github repo.
 
 ![Argo App Kustomize Section](pictures/argocd-kustomize-ui-staging.png)
 
-#### Synchronize: 
+#### Synchronize
 
 Afterwards, it will read the parameters and the Kubernetes manifests and auto-sync, since you enabled this function when creating your ArgoCD app. Once the manifests are applied, you can review the application health and resources you deployed.
 
-#### Health Status:
+#### Health Status
 
 You can now review the application health and the resources deployed. Below is an example of both environments: Staging and Production applications that are deployed and healhy.
 
@@ -192,7 +200,7 @@ You can now review the application health and the resources deployed. Below is a
 
 ![Argo App Deployment](pictures/argocd-cluster-ns-ui.png)
 
-If you need to rollback or view your history for an application due to any errors or issues, you can do so by click on the HISTORY/ROLLBACK button within the UI to view the deployment history. Included is also a revision ID that will link you directly to the Git repo commit that can be identified as the root cause of an error or issue that needs resolved. 
+If you need to rollback or view your history for an application due to any errors or issues, you can do so by click on the HISTORY/ROLLBACK button within the UI to view the deployment history. Included is also a revision ID that will link you directly to the Git repo commit that can be identified as the root cause of an error or issue that needs resolved.
 
 ![Argo App History](pictures/argocd-app-history-ui.png)
 
@@ -209,7 +217,7 @@ To login to the CLI, execute the following in your terminal:
 
 `argocd login localhost:8080 --username admin --password <same password used in argocd ui>`
 
-You should be able to login using the same password you used when accessin the ArgoCD UI. 
+You should be able to login using the same password you used when accessin the ArgoCD UI.
 
 Next, execute the following:
 
@@ -241,7 +249,7 @@ This will return a response that allows you to view the application you created 
 
 Check status of deployment:
 
-`argocd app get <application name>` 
+`argocd app get <application name>`
 
 ![ArgoCD CLI Get App](pictures/argocd-cli-get-app.png)
 
@@ -255,6 +263,6 @@ In case you need to rollback the ArgoCD application, you can do so by rolling ba
 
 The response will return the application history, including an ID, date, and branch that any revision was made on the application. You can then use the ID to rollback the application to a specific deployed version:
 
-`argocd app history <application name> <application history id>` 
+`argocd app history <application name> <application history id>`
 
-Congrats, you've created and deployed an Kustomize project with the argocd CLI. Now, each time a new `kustomize.yaml` file is added or modified, ArgoCD will detect those changes and update the deployments for your project. 
+Congrats, you've created and deployed an Kustomize project with the argocd CLI. Now, each time a new `kustomize.yaml` file is added or modified, ArgoCD will detect those changes and update the deployments for your project.
