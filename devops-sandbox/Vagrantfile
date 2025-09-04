@@ -17,7 +17,7 @@ Vagrant.configure("2") do |config|
   subnet    = user_config["subnet"] || "192.168.56"
   default_ram  = user_config["default_ram"] || 2048
   default_cpus = user_config["default_cpus"] || 2
-  roles     = %w(monitoring docker k8s minio cicd base)
+  roles     = %w(monitoring docker k8s minio aws base)
 
   (1..num_vms).each do |i|
     vm_defaults = (user_config["roles"] && user_config["roles"][i-1]) || {}
@@ -46,8 +46,6 @@ Vagrant.configure("2") do |config|
         vm.vm.network "forwarded_port", guest: 9000, host: (9000)   # Portainer
       elsif role == "minio"
         vm.vm.network "forwarded_port", guest: 9001, host: (9001)   # MinIO Console
-      elsif role == "cicd"
-        vm.vm.network "forwarded_port", guest: 8080, host: (8080)   # Jenkins
       end
 
       # Provider-specific settings
