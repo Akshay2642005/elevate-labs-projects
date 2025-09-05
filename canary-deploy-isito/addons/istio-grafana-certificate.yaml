@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-kiali-cert
+  namespace: istio-system
+spec:
+  secretName: grafana-kiali-cert
+  issuerRef:
+    name: mkcert-cluster-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - "grafana-istio.home.clcreative.de"
+  privateKey:
+    rotationPolicy: Always
