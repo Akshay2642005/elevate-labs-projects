@@ -68,6 +68,26 @@ Before starting, ensure you have the following installed and configured:
 - **Docker** for building custom images (optional)
 - **Helm** (v3.0+) for addon installations
 
+### Kubernetes Installation
+
+Using the devops-sandbox k8s template
+
+Use `config.yaml` to define the provider, number of VMs, resource defaults, network, and per-VM roles.
+
+```yaml
+provider: virtualbox # options: virtualbox, libvirt, vmware_desktop, hyperv
+num_vms: 1 # number of machines
+subnet: 192.168.56 # base subnet for private networking
+default_ram: 4096 # default RAM in MB
+default_cpus: 2 # default CPU cores
+
+roles:
+  - hostname: node01
+    role: k8s
+    ram: 4096
+    cpus: 2
+```
+
 ### Istio Installation
 
 If Istio is not already installed, follow these steps:
