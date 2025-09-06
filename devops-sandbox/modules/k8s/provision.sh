@@ -13,8 +13,12 @@ apt-get install -y -qq curl apt-transport-https ca-certificates gnupg lsb-releas
 # --- Install K3s with traefik/servicelb disabled ---
 log "[+] Installing K3s (traefik/servicelb disabled)..."
 /usr/local/bin/k3s-uninstall.sh >/dev/null 2>&1 || true
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable traefik --disable servicelb --write-kubeconfig /home/vagrant/.kube/config --write-kubeconfig-mode 644" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable traefik --disable servicelb" sh -
 
+sudo chmod 666 /etc/rancher/k3s/k3s.yaml
+sudo install -D /etc/rancher/k3s/k3s.yaml /home/vagrant/.kube/config
+sudo cp /etc/rancher/k3s/k3s.yaml /home/vagrant/.kube/config
+sudo cp /etc/rancher/k3s/k3s.yaml /vagrant/config
 # --- Wait for K3s API to be ready ---
 log "[+] Waiting for K3s API server to become ready..."
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -66,7 +70,7 @@ EOF
 log "[+] Installing Traefik via Helm..."
 helm repo add traefik https://traefik.github.io/charts
 helm repo update
-helm upgrade --install traefik traefik/traefik -n kube-system
+helm upgrade --install traefik traefik/traefik -n traefik --create-namespace
 
 log "[✓] Provisioning complete!"
 

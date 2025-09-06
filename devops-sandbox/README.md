@@ -1,7 +1,5 @@
 # DevOps Sandbox
 
-![DevOps Sandbox Header](pictures/devops-sandbox-header.png)
-
 A self-contained lab environment for learning and practicing DevOps tooling on local virtual machines. This sandbox uses Vagrant to provision Ubuntu VMs with modular roles such as base utilities, Docker + Portainer, a single-node Kubernetes (K3s) cluster with MetalLB and Traefik, object storage via MinIO, and a monitoring stack (Prometheus, Node Exporter, Alertmanager, Grafana).
 
 This document explains what is included, how to configure it, how to run it, how to access services, and how to customize or troubleshoot the environment.
@@ -20,7 +18,6 @@ This document explains what is included, how to configure it, how to run it, how
   - `minio`: MinIO object storage + console
   - `monitoring`: Prometheus + Node Exporter + Alertmanager + Grafana
 
-![High-level Architecture](pictures/architecture-overview.png)
 
 Provisioning flow (per VM):
 
@@ -153,7 +150,6 @@ Container runtime and a UI for managing containers:
 - Portainer Community Edition in Docker:
   - Portainer UI: host port `9000` (HTTP) and `9443` (HTTPS) → container ports
 
-![Portainer Dashboard](pictures/portainer-dashboard.png)
 
 ### k8s
 
@@ -168,9 +164,6 @@ Single-node Kubernetes via K3s and a minimal ingress + load balancing stack:
   - Applies `IPAddressPool` and `L2Advertisement`
 - Installs Traefik via Helm in `kube-system`
 
-![kubectl get nodes](pictures/kubectl-get-nodes.png)
-![Traefik Dashboard](pictures/traefik-dashboard.png)
-![MetalLB IP Pool](pictures/metallb-ip-pool.png)
 
 ### minio
 
@@ -182,7 +175,6 @@ S3-compatible object storage with a web console:
   - S3 API: `:9000`
   - Console: `:9001`
 
-![MinIO Console](pictures/minio-console.png)
 
 ### monitoring
 
@@ -201,9 +193,6 @@ System and service monitoring stack:
   - Low disk space (< 10% free)
 - Alertmanager example receiver: email (placeholder values in `modules/monitoring/alertmanager/config.yml`)
 
-![Prometheus UI](pictures/prometheus-ui.png)
-![Grafana Dashboard](pictures/grafana-dashboard.png)
-![Alertmanager UI](pictures/alertmanager-ui.png)
 
 Security note: Do not commit real SMTP credentials; use environment variables or a secrets manager in real setups.
 
@@ -250,7 +239,6 @@ Kubernetes (k8s role):
    vagrant ssh node01
    ```
 
-![Vagrant Up Output](pictures/vagrant-up.png)
 
 Stopping and destroying:
 
@@ -397,27 +385,6 @@ vagrant provision node01
 - MinIO credentials: This setup starts MinIO with default parameters. Configure access keys using environment variables or systemd `Environment` entries for production-like scenarios.
 
 ---
-
-## Screenshots and Diagrams (placeholders)
-
-Place images under `devops-sandbox/pictures/` and update names if you prefer different filenames. Suggested placeholders used above:
-
-- `pictures/devops-sandbox-header.png` – Project banner/header
-- `pictures/architecture-overview.png` – High-level architecture diagram
-- `pictures/vagrant-up.png` – Terminal output of `vagrant up`
-- `pictures/portainer-dashboard.png` – Portainer landing page
-- `pictures/kubectl-get-nodes.png` – `kubectl get nodes` output
-- `pictures/traefik-dashboard.png` – Traefik dashboard
-- `pictures/metallb-ip-pool.png` – MetalLB IP pool illustration or `kubectl` output
-- `pictures/minio-console.png` – MinIO web console
-- `pictures/prometheus-ui.png` – Prometheus graph UI
-- `pictures/grafana-dashboard.png` – Grafana dashboard (e.g., Node Exporter Full)
-- `pictures/alertmanager-ui.png` – Alertmanager status page
-
-> After adding images, no README changes are required if you keep the same filenames.
-
----
-
 ## Security Considerations
 
 This sandbox is for local learning and experimentation. It is not hardened for production:

@@ -7,5 +7,5 @@ default_cpus: 2 # default CPU cores
 roles:
   - hostname: node01
     role: k8s
-    ram: 4096
-    cpus: 2
+    ram: 8192
+    cpus: 8
