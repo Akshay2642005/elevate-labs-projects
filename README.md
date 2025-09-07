@@ -1,4 +1,4 @@
-## Elevate Labs Projects (Windows-Friendly)
+## Elevate Labs Projects
 
 This repository aggregates three DevOps-focused projects I built and documented for hands-on learning and demonstration. The projects cover canary deployments with Istio, a local DevOps sandbox with Vagrant and popular tooling, and a GitOps-enabled Spring Boot application with Kustomize overlays and CI/CD.
 
